@@ -1,0 +1,35 @@
+import codecademylib3
+import pandas as pd
+
+#loading data
+inventory = pd.read_csv('inventory.csv')
+#print(inventory.head(10))
+
+#first 10 rows are staten island data, save to its own df
+staten_island = inventory.iloc[:10]
+#print(staten_island)
+
+#someone is requesting all products sold at staten island, save all SI products as its own variable to return to this customer
+product_request = staten_island.product_description
+#print(product_request)
+
+#Another customer wants to know what type of seeds are sold at Brooklyn location
+seed_request = inventory[(inventory.product_type == "seeds") & (inventory.location == "Brooklyn")]
+#print(seed_request)
+
+#Creating a variable based on quantity available
+inventory['in_stock'] = inventory.apply(lambda row: True if row.quantity>0 else False, axis=1)
+#print(inventory.head(10))
+
+#how much is all of the inventory worth?
+inventory['total_value'] = inventory.price * inventory.quantity
+#print(inventory.head(10))
+
+#making a product description
+#defining function
+combine_lambda = lambda row: \
+'{} - {}'.format(row.product_type, row.product_description)
+#creating column
+inventory['full_description'] = inventory.apply(combine_lambda, axis=1)
+print(inventory.head(10))
+
