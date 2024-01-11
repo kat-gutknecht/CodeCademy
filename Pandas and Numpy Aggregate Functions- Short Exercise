@@ -1,0 +1,25 @@
+import codecademylib3
+import pandas as pd
+
+user_visits = pd.read_csv('page_visits.csv')
+print(user_visits.head())
+
+#how did people find this website?
+click_source = user_visits.groupby('utm_source').id.count().reset_index()
+#print(click_source)
+
+#has the click source changed over time?
+click_source_by_month = user_visits.groupby(['utm_source', 'month']).id.count().reset_index()
+#print(click_source_by_month)
+
+click_source_by_month_pivot = click_source_by_month.pivot(
+  columns = 'month',
+  index = 'utm_source',
+  values = 'id'
+).reset_index()
+print(click_source_by_month_pivot)
+
+
+#food for thought: 
+#Is it possible to custom sort columns or rows? Ex. If the variable was just "Jan, Feb, Mar" would it sort chronologically or alphabetically, and how to fix? 
+#Can we add totals and subtotals to these?
