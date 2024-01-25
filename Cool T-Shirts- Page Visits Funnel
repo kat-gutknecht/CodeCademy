@@ -1,0 +1,148 @@
+import codecademylib3
+import pandas as pd
+
+visits = pd.read_csv('visits.csv',
+                     parse_dates=[1])
+cart = pd.read_csv('cart.csv',
+                   parse_dates=[1])
+checkout = pd.read_csv('checkout.csv',
+                       parse_dates=[1])
+purchase = pd.read_csv('purchase.csv',
+                       parse_dates=[1])
+
+
+#1- inspect data
+#print(visits, cart, checkout, purchase)
+
+#2-5 how many visits made it to the cart?
+visits_to_cart_df = pd.merge(visits, cart, how = 'left')
+#print(visits_to_cart)
+
+visits_to_cart_df['item_in_cart'] = visits_to_cart_df.cart_time.notnull()
+visits_to_cart_tb = visits_to_cart_df.groupby(['item_in_cart']).user_id.count().reset_index()
+
+visits_to_cart_tb['percent'] = 100*visits_to_cart_tb.user_id/ (visits_to_cart_tb.user_id.sum())
+#print(visits_to_cart_tb)
+
+
+#6 How many people who placed items in their cart ended up making a purhcase?
+cart_to_checkout_df = pd.merge(cart, checkout, how = 'left')
+
+cart_to_checkout_df['item_checkout'] = cart_to_checkout_df.checkout_time.notnull()
+cart_to_checkout_tb = cart_to_checkout_df.groupby(['item_checkout']).user_id.count().reset_index()
+#print(cart_to_checkout_tb)
+
+
+
+# answers aren't quite lining up...check number of rows and distinct users to see why
+#print(purchase.user_id.nunique())
+#print(len(purchase))
+
+#visits = 2000 rows, all distinct users
+#cart = 348 rows, all distinct users
+#checkout has 360 rows, 226 distinct users
+#purchase has 252 rows, 144 distinct users
+#weird results because the description of the tables clearly states that each table is a list of USERS who have made it to each stage of the checkout process. Would make sense if cart, checkout, and purchase were a list of items but it is stated that they aren't... maybe there needs to be some data cleanup? Can we view which rows are duplicates?
+
+num_users_checkout = checkout.groupby(['user_id']).checkout_time.count().reset_index()
+num_users_checkout = num_users_checkout.rename(columns = {"checkout_time" : "count_of_userid"})
+new_checkout = checkout.merge(num_users_checkout)
+#print(new_checkout[new_checkout.count_of_userid > 1])
+
+num_users_purchase = purchase.groupby(['user_id']).purchase_time.count().reset_index()
+num_users_purchase = num_users_purchase.rename(columns = {"purchase_time" : "count_of_userid"})
+new_purchase = purchase.merge(num_users_purchase)
+#print(new_purchase[new_purchase.count_of_userid > 1])
+
+pdf = new_purchase[new_purchase.count_of_userid > 1]
+cdf = new_checkout[new_checkout.count_of_userid > 1]
+
+pdf.sort_values(by = ['user_id', 'purchase_time'])
+
+cdf.sort_values(by = ['user_id', 'checkout_time'])
+
+c_to_p = pd.merge(cdf.rename(columns = {'count_of_userid' : 'checkout_count'}), pdf.rename(columns = {'count_of_userid' : 'purchase_count'}), how = 'left')
+#print(c_to_p)
+#print(c_to_p.user_id.nunique())
+#Observation: some are duplicates but not all - for several user_id's, the time stamp differs 
+#Verdict: there is something wrong with the data. Potential reasons why: we were given an innacurate description of the tables, we are missing columns with vital information, or there are some strange data errors that are occurring for no known reason...
+#Ex. user d33bdc47-4afa-45bc-b4e4-dbe948e34c0d has 2 checkout times at 9:29 and 9:42. Then that same user has 3 purchase times at 9:49, 9:56, and 9:57.
+#Ex. user f413cd55-d85f-4659-802e-33fb14b20c0f has 3 checkout times, at 9:55, 10:02, and 10:06, and has 4 purchase times at 10:06, 10:14, 10:20, and 10:24 
+
+#Possible explanation: 
+#Visits = One row per user who has ever visited the site 
+#Cart = One row per user who has ever placed something in the cart
+#Checkout = One row per product checked out, regardless of quantity (ex. 1 apple, 1 orange, and 2 grapefruits would have 3 rows)
+#Purchase = One row per item purchased (1 apple, 1 orange, and 2 grapefruits would have 4 rows)
+#This could explain why some checkouts/purchases have multiple lines with the exact same day and time listed (time includes hours, minutes, seconds. And it could also explain why sometimes the number of lines in purchases exceeds the number of checkouts. 
+
+ #for the purposes of this exercise, I will select only distinct user id's from each table. I will sort the data so that only the first instance of checkout or purchase is chosen.
+
+checkout.sort_values(by = ['user_id', 'checkout_time'])
+u_checkout = checkout.drop_duplicates(subset = 'user_id', keep = 'first')
+#print(u_checkout.user_id.nunique())
+#print(u_checkout)
+
+purchase.sort_values(by = ['user_id', 'purchase_time'])
+u_purchase = purchase.drop_duplicates(subset = 'user_id', keep = 'first')
+#print(u_purchase.user_id.nunique())
+#print(u_purchase)
+
+#How many people who placed items in their cart ended up in checkout?
+cart_to_ucheckout_df = pd.merge(cart, u_checkout, how = 'left')
+
+cart_to_ucheckout_df['item_checkout'] = cart_to_ucheckout_df.checkout_time.notnull()
+cart_to_ucheckout_tb = cart_to_ucheckout_df.groupby(['item_checkout']).user_id.count().reset_index()
+cart_to_ucheckout_tb['percent'] = 100*cart_to_ucheckout_tb.user_id/(cart_to_ucheckout_tb.user_id.sum())
+#print(cart_to_ucheckout_tb)
+
+#7-9 merge all four tables together to evaluate results. Build a funnel to show the number and percentage of users that made it to each step of the purchasing process
+visits_to_purchase_df = visits.merge(cart, how = 'left').merge(u_checkout, how = 'left').merge(u_purchase, how = 'left')
+#print(visits_to_purchase_df)
+
+
+visits_to_purchase_df['cart'] = visits_to_purchase_df.cart_time.notnull()
+visits_to_purchase_df['checkout'] = visits_to_purchase_df.checkout_time.notnull()
+visits_to_purchase_df['purchase'] = visits_to_purchase_df.purchase_time.notnull()
+
+visits_to_purchase_dummies = pd.get_dummies(visits_to_purchase_df, columns = ['cart', 'checkout', 'purchase'])
+visits_to_purchase_dummies = visits_to_purchase_dummies.drop(columns = ['cart_False', 'checkout_False', 'purchase_False'])
+#print(visits_to_purchase_dummies)
+
+funnel = pd.DataFrame([
+  [visits_to_purchase_dummies.user_id.count(), visits_to_purchase_dummies.cart_True.sum(), visits_to_purchase_dummies.checkout_True.sum(), visits_to_purchase_dummies.purchase_True.sum()]
+],
+columns = ['num_visits', 'num_cart', 'num_checkout', 'num_purchase'])
+funnel['perc_cart'] = 100*funnel.num_cart / funnel.num_visits
+funnel['perc_checkout'] = 100*funnel.num_checkout / funnel.num_visits
+funnel['perc_purchase'] = 100*funnel.num_purchase / funnel.num_visits
+print(funnel)
+
+#Can we make funnel more visually digestible?
+funnel2 = pd.DataFrame([
+  ['1 - visit', visits_to_purchase_dummies.user_id.count()],
+  ['2 - cart', visits_to_purchase_dummies.cart_True.sum()],
+  ['3 - checkout', visits_to_purchase_dummies.checkout_True.sum()],
+  ['4 - purchase', visits_to_purchase_dummies.purchase_True.sum()]],
+  columns = ['level', 'num_people_reached']
+)
+funnel2['percent'] = 100*funnel2.num_people_reached / visits_to_purchase_dummies.user_id.count()
+print(funnel2)
+
+
+#Where did most people stop?
+visits_to_purchase_df['end_step'] = visits_to_purchase_df.apply(lambda row:
+"2- cart" if row['cart'] == True and row['checkout'] == False and row['purchase'] == False
+else "3- checkout" if row['cart'] == True and row['checkout'] == True and row['purchase'] == False
+else "4- purchase" if row['cart'] == True and row['checkout'] == True and row['purchase'] == True
+else "1- visit", axis = 1
+)
+visits_to_purchase_tb = visits_to_purchase_df.groupby('end_step').user_id.count().reset_index()
+visits_to_purchase_tb.rename(columns = {'user_id' : 'num_people_stopped_at'}, inplace = True)
+visits_to_purchase_tb['perc'] = 100*visits_to_purchase_tb.num_people_stopped_at / visits_to_purchase_tb.num_people_stopped_at.sum()
+print(visits_to_purchase_tb)
+
+#10-12 Find the average time from visit to purchase
+purchasers = visits_to_purchase_df[visits_to_purchase_df.purchase == True]
+purchasers['time'] = purchasers.purchase_time - purchasers.visit_time
+print(purchasers.time.mean())
