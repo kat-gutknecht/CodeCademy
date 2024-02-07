@@ -1,0 +1,74 @@
+/*preview data*/
+select *
+from hacker_news
+order by score desc
+limit 5;
+
+/*Are some users dominating this website?
+Answer: no - top user only has 8% of the points*/
+
+with tp as (
+  select sum(score) as total_points
+  from hacker_news
+)
+select user, sum(score) as user_points, tp.total_points, round(100.00*sum(score)/tp.total_points,2) as percent
+from hacker_news
+cross join tp
+group by user
+having user_points>200
+order by user_points desc;
+
+/*How many times has this link been posted?
+https://www.youtube.com/watch?v=dQw4w9WgXcQ
+Answer: only 3*/
+
+select count(*) as num_posts
+from hacker_news
+where url = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+
+/*Analyze these sites, are they popular?*/
+select count(*) as num_posts, case 
+  when url like '%github.com%' then 'GitHub'
+  when url like '%Medium.com%' then 'Medium'
+  when url like '%nytimes.com%' then 'New York Times'
+  else 'Other'
+  end as 'source'
+  from hacker_news
+  group by source;
+
+/*Can you find other websites? Are any of them also popular?
+Answ: Yes I found more websites, but none are super popular, most just have one post and that is all. A couple have 8 posts, but given that there are like 4000 posts... this still isn't a lot'.*/
+select case
+  when instr(url, '.co') > 0 then substr(url, instr(url,'//')+2, instr(url, '.co')-4)
+  when instr(url, '.org') > 0 then substr(url, instr(url,'//')+2, instr(url, '.org')-4)
+  when instr(url, '.net') > 0 then substr(url, instr(url,'//')+2, instr(url, '.net')-4)
+  when instr(url, '.info')>0 then substr(url, instr(url,'//')+2, instr(url, '.info')-4)
+  else 'other'
+  end as 'expanded_source',
+  count(*) as count
+from hacker_news
+where url not null
+group by expanded_source
+order by count desc;
+
+
+/*which websites did I miss?
+youtu.be seems to be a popular one that I missed.*/
+select url, case
+  when instr(url, '.co') > 0 then substr(url, instr(url,'//')+2, instr(url, '.co')-4)
+  when instr(url, '.org') > 0 then substr(url, instr(url,'//')+2, instr(url, '.org')-4)
+  when instr(url, '.net') > 0 then substr(url, instr(url,'//')+2, instr(url, '.net')-4)
+  when instr(url, '.info')>0 then substr(url, instr(url,'//')+2, instr(url, '.info')-4)
+  else 'other'
+  end as 'expanded_source'
+from hacker_news
+where expanded_source = "other" and url not null
+;
+
+
+/*what is the best time of day to post a story?
+Answ: about 6-8 is the best time to post and receive a high score*/
+SELECT sum(score) as ag_score, strftime('%H', timestamp) as hour
+from hacker_news
+group by hour
+order by hour;
