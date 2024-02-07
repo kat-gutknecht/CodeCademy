@@ -1,0 +1,77 @@
+import codecademylib3
+
+# Import pandas with alias
+import pandas as pd
+import numpy as np
+
+#1-8 Read in the census dataframe and clean up variables
+census = pd.read_csv('census_data.csv', index_col=0)
+pd.set_option('max_rows', None)
+print(census.head())
+census['first_name'] = census['first_name'].astype('str')
+census['last_name'] = census['last_name'].astype('str')
+census['higher_tax'] = pd.Categorical(census['higher_tax'], ['strongly disagree', 'disagree', 'neutral', 'agree', 'strongly agree'], ordered=True)
+census['marital_status'] = census['marital_status'].astype('str')
+#census['birth_year'] = census['birth_year'].astype('int')
+
+#having issues with a null value... TRYING to get rid of it some way some how...
+#print(census.isnull())
+#print(census[census.birth_year.isnull()])
+#print(census.groupby(['birth_year']).first_name.count())
+census['birth_year'].fillna(0, inplace=True)
+census['birth_year'] = census['birth_year'].replace("missing", 1967)
+census['birth_year'] = census['birth_year'].astype('int')
+#print(census.dtypes)
+
+#9-11 create dummies for marital status, find average birth year, and the median sentiment among respondants for an increase in taxes for the wealthy
+print("The average birth year is: " + str(census['birth_year'].mean()))
+print("The median sentiment on the issue of higher taxes is: " + str(census['higher_tax'].cat.codes.median()))
+
+#census = pd.get_dummies(data = census, columns = ['marital_status'])
+#print(census.head())
+
+
+#Self guided- what other insights can you pull from the data?
+#Wealth tax opinions by age group
+census['age'] = 2024 - census.birth_year
+
+census['age_group'] = census.age.apply(lambda x: 
+'0-20' if x<=20
+else '21-30' if x<=30
+else '31-40' if x<=40
+else '40-55' if x<=55
+else '56+')
+
+census['encoded_tax_opinion'] = census['higher_tax'].cat.codes
+census['encoded_tax_opinion'] = census['encoded_tax_opinion'].astype('int')
+tax_opinion_by_age = census.groupby(['age_group']).encoded_tax_opinion.mean()
+print(tax_opinion_by_age)
+
+#wealth tax opinions by income group
+print(census.income_year.median())
+#why is median income so high?
+
+census['income_group'] = census.income_year.apply(lambda x: 
+'0-20K' if x<=20000
+else '21-50K' if x<=50000
+else '51-75K' if x<=75000
+else '76-120K' if x<=120000
+else '121K+')
+
+census['income_group'] = pd.Categorical(census['income_group'], ['21-50K', '51-75K', '76-120K', '121K+'])
+print(census.groupby(['income_group']).income_group.count())
+print(census.groupby(['age_group']).age_group.count())
+#Ans: the population age is skewed towards being older. Because younger people are still building their careers, they are less likely to have higher incomes than the older population. This is evident when we also see that over half of the respondants are earning 75K+ a year.
+
+age_income = census.plot.scatter(x='age',
+y='income_year',
+s=100)
+print(age_income)
+
+
+
+#av number of children by marital status
+print(census.groupby(['marital_status']).num_children.mean())
+
+#median income by voter status
+print(census.groupby(['voted']).income_year.mean())
