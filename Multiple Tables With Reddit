@@ -1,0 +1,142 @@
+select * from users
+limit 3;
+
+select * from posts
+limit 3;
+
+select * from subreddits
+limit 3;
+
+/*append posts2 to the posts dataset
+select * from posts
+union 
+select * from posts2;
+
+/*check each dataset, just make sure rows are unique and what not. Are there missing values?*/
+select username, count(*) as num
+from users
+group by username
+having num>1;
+
+select * from users
+where username is null;
+/*all values are blank, 5 rows*/
+with total_posts as(
+  select * from posts
+  union 
+  select * from posts2)
+select title, count(*) as num
+from total_posts
+group by title
+having num>1;
+
+with total_posts as(
+  select * from posts
+  union 
+  select * from posts2)
+select * from total_posts
+where title is null;
+/*all values are blank, 6 rows*/
+
+
+select name, count(*) as num
+from subreddits
+group by name
+having num>1;
+
+
+/*Relate time from starting reddit to total score. Are those who are on the platform longer getting higher scores? Try to show scatter plot and correlation (is this possible in sql?)*/
+select date('now') - join_date as user_time_yrs, score
+from users
+where username not null
+order by score desc
+limit 10;
+
+
+/*Relate the number of posts to total user score*/
+with total_posts as(
+  select * from posts
+  union 
+  select * from posts2),
+post_count as (
+  select user_id, count(*) as num_posts
+  from total_posts
+  group by user_id)
+select u.username, u.score, p.num_posts
+from users as u
+left join post_count as p
+on u.id = p.user_id
+order by score desc
+;
+/*which subredits get the mosts posts?*/
+with all_posts as(
+  select * from posts
+  union 
+  select * from posts2),
+non_null_posts as(
+  select * from all_posts
+  where id not null
+),
+post_count as (
+  select subreddit_id, count(*) as num_posts
+  from non_null_posts
+  group by subreddit_id),
+agg_posts as(
+  select count(*) as total_posts
+  from non_null_posts
+),
+sub2 as (
+  select * from subreddits
+  cross join agg_posts)
+select  s.name as sub_name, p.num_posts, s.total_posts, 100.0*p.num_posts/s.total_posts as perc_total
+from sub2 as s
+left join post_count as p
+on s.id = p.subreddit_id
+order by num_posts desc;
+
+
+/*How many users on reddit have made zero posts at all? Are there a few users that are creating the majority of the posts or are the posts more evenly distributed?*/
+with all_posts as(
+  select * from posts
+  union 
+  select * from posts2),
+non_null_posts as(
+  select * from all_posts
+  where id not null
+),
+post_count as (
+  select user_id, count(*) as num_posts
+  from non_null_posts
+  group by user_id),
+agg_posts as(
+  select count(*) as total_posts
+  from non_null_posts
+),
+users2 as(
+  select * 
+  from users
+  cross join agg_posts
+),
+users3 as(
+  select u.username, p.num_posts, u.total_posts, 100.00*num_posts/total_posts as perc_posts
+from users2 as u
+left join post_count as p
+on u.id = p.user_id
+order by perc_posts desc)
+select * from users3
+where username not null
+;
+
+with all_posts as(
+  select * from posts
+  union 
+  select * from posts2),
+user_posts as (
+  select *
+  from users as u
+  left join all_posts as p
+  on u.id = p.user_id)
+select count(*) as num_non_posters
+from user_posts
+where (title is null) AND (username not null)
+;
