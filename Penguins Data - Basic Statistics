@@ -1,0 +1,63 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt 
+import seaborn as sns
+import codecademylib3
+from scipy.stats import pearsonr
+np.set_printoptions(suppress=True, precision = 1) 
+
+penguins = pd.read_csv('penguins.csv')
+print(penguins.head())
+#print(penguins.describe())
+#print(penguins.dtypes)
+
+#compare mean values for the different species of penguin
+sns.boxplot(data=penguins, x='species', y='bill_length_mm')
+plt.show()
+plt.close()
+
+sns.boxplot(data=penguins, x='species', y='bill_depth_mm')
+plt.show()
+plt.close()
+
+sns.boxplot(data=penguins, x='species', y='flipper_length_mm')
+plt.show()
+plt.close()
+
+sns.boxplot(data=penguins, x='species', y='body_mass_g')
+plt.show()
+plt.close()
+
+#compare mean weights for male vs female
+sns.boxplot(data=penguins, x='sex', y='body_mass_g')
+plt.show()
+plt.close()
+
+#weight distributions
+male_w = penguins.body_mass_g[penguins.sex == 'male']
+female_w = penguins.body_mass_g[penguins.sex == 'female']
+
+sns.histplot(x='body_mass_g', data=penguins)
+plt.show()
+plt.close()
+
+#side by side histograms show bimodal distributions in weight for each gender... probably fueled by the differences in species. The gentoo species has a much higher average body mass than the other two
+plt.hist(male_w, color = 'purple', label = 'Male Weight', normed=True, alpha=.4)
+plt.hist(female_w, color = 'orange', label="Female Weight", normed=True, alpha=.4)
+plt.legend()
+plt.show()
+plt.close()
+
+#Are flipper length and body mass related?
+#ans: yes, they are highly correlated
+plt.scatter(x=penguins.flipper_length_mm, y=penguins.body_mass_g)
+plt.xlabel('Flipper Length (mm)')
+plt.ylabel('Body Mass (g)')
+plt.show()
+plt.close()
+
+cov = np.cov(penguins.flipper_length_mm, penguins.body_mass_g)
+print(cov)
+
+corr, p = pearsonr(penguins.flipper_length_mm, penguins.body_mass_g)
+print(corr)
