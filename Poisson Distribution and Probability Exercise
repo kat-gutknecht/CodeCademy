@@ -1,0 +1,54 @@
+import scipy.stats as stats
+import numpy as np
+
+### Task Group 1 ###
+## Task 1: A factory expects to have 7 defects a day, and the number of defects follows a poisson distribution
+lam = 7
+
+## Task 2: What is the probability that you would observe exactly 7 defects in one day?
+prob_7 = stats.poisson.pmf(7, 7)
+print("The probability of observing 7 defects in one day is: " + str(prob_7))
+
+## Task 3: Four or fewer defects in a day is considered exceptionally good. What is the probability that this happens in any given day?
+prob_4_or_less = stats.poisson.cdf(4,7)
+print("The probability of observing 4 or less defects in one day is: " + str(prob_4_or_less))
+
+
+## Task 4: More than 9 defects is considered a bad day. What is the probability of this happening?
+prob_over_9 = 1 - stats.poisson.cdf(9, 7)
+print("The probability of observing more than 9 defects in one day is: " + str(prob_over_9))
+
+### Task Group 2 ###
+## Task 5:
+year_defects = stats.poisson.rvs(7, size = 365)
+
+## Task 6:
+print(year_defects[:20])
+
+## Task 7:
+print("Expected yearly number of defects: " + str(7*365))
+
+## Task 8:
+print("Simulated yearly number of defects: " + str(year_defects.sum()))
+
+
+## Task 9:
+print("Simulated average daily number of defects: " + str(year_defects.mean()))
+## Task 10:
+print("Simulated maximum daily number of defects: " + str(year_defects.max()))
+## Task 11:
+print("Probability of observing 15 defects on any day: " + str(stats.poisson.pmf(15,7)))
+
+### Extra Bonus ###
+# Task 12
+print("On 90% of days, we can expect to observe : " + str(stats.poisson.ppf(.9, 7)) + " defects or fewer.")
+
+# Task 13
+num_high_defect_days = 0
+for value in year_defects:
+  if value >= stats.poisson.ppf(.9, 7):
+    num_high_defect_days += 1
+
+prop_high_defect_days = 100*num_high_defect_days / len(year_defects)
+
+print("When tested with our 365 days of simulation data, we found that " + str(num_high_defect_days) + " days had 10 or more defects. This is roughly " + str(prop_high_defect_days) + " percent of the year.")
